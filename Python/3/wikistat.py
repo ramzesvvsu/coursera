@@ -1,19 +1,94 @@
+# -*- coding: utf-8 -*-
+
+
 from bs4 import BeautifulSoup
 import re
 import os
 
 
+def get_link_list(html_doc):
+
+    '''    html_doc = ''
+    if not path:
+        path = '.'
+    try:
+        with open(path + file_name, 'r') as f:
+            html_doc = f.read()
+    except:
+        return []
+    '''
+    soup = BeautifulSoup(html_doc, 'lxml')
+    link_list = soup.find_all('a', href=True)
+    return_list = []
+    #link_list = soup.find_all(re.compile('<a href=("\/wiki\/(\D)+?")(\D)*<\/a>'))
+    for current_link in link_list:
+        if re.match(r'^\/wiki\/(\D)*$', current_link['href']):
+            return_list.append(current_link['href'].split('/wiki/')[1])
+    return list(set(return_list))
+
+def find_end(link, end, decide_list, step_list, files):
+    if len(step_list) > 10:
+        return
+
+    link_list = files.setdefault(link, {'links': []})
+    if end in link_list['links']:
+        decide_list.append(tuple(step_list))
+        return
+    for current_link in link_list['links']:
+        if current_link not in step_list:
+            stop_link = False
+            for current_decide in decide_list:
+                if current_link in current_decide:
+                    stop_link = True
+                    break
+            if stop_link:
+                continue
+
+            step_list.append(current_link)
+            find_end(current_link, end, decide_list, step_list, files)
+            step_list.remove(current_link)
+
+
+def fill_files_html(path, files):
+    for key in files:
+        with open(path + key, 'r') as f:
+            files[key] = {'html': f.read()}
+            files[key]['links'] = get_link_list(files[key]['html'])
+
 # Вспомогательная функция, её наличие не обязательно и не будет проверяться
 def build_tree(start, end, path):
     link_re = re.compile(r"(?<=/wiki/)[\w()]+")  # Искать ссылки можно как угодно, не обязательно через re
     files = dict.fromkeys(os.listdir(path))  # Словарь вида {"filename1": None, "filename2": None, ...}
+    fill_files_html(path, files)
+    link_list = files[start]['links']
+    decide_list = []
+    decide_len = 0
+    for current_link in link_list:
+        stop_link = False
+        for current_decide in decide_list:
+            if current_link in current_decide:
+                stop_link = True
+                break
+        if stop_link:
+            continue
+        step_list = [start]
+        find_end(current_link, end, decide_list, step_list, files)
+        if len(decide_list) > decide_len:
+            decide_len = len(decide_list)
+            print (decide_list)
     # TODO Проставить всем ключам в files правильного родителя в значение, начиная от start
+
     return files
+
+def calculate_brige(filed_dict, purpose, bridge):
+    pass
 
 
 # Вспомогательная функция, её наличие не обязательно и не будет проверяться
 def build_bridge(start, end, path):
     files = build_tree(start, end, path)
+    all_bridge = []
+    calculate_brige(files, end, all_bridge)
     bridge = []
     # TODO Добавить нужные страницы в bridge
     return bridge
