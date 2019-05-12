@@ -1,0 +1,3 @@
+{% if params_len > 0 %}
+{{ method }} {% for key, values in params.items %}{{ key }}: {{ values }}{% endfor %}
+{% endif %}statement is {{ statement_value }}
